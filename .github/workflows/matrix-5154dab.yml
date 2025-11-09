@@ -1,0 +1,50 @@
+name: CI Matrix 5154dab
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']  # 3+ variants run in parallel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: matrix-5154dab
+        run: echo "Building for Python ${{ matrix.python-version }}"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Generate build artifact
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, sys, platform, time, json
+          payload = {
+            "variant": f"py{sys.version.split()[0]}",
+            "platform": platform.platform(),
+            "timestamp": time.time()
+          }
+          with open("output.json","w") as f:
+            json.dump(payload, f, indent=2)
+          PY
+          # Ensure non-empty
+          test -s output.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-5154dab-py${{ matrix.python-version }}
+          path: output.json
+          if-no-files-found: error
+          retention-days: 7
